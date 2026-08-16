@@ -42,6 +42,7 @@ Sistem monitoring terpusat untuk VM di lingkungan **Proxmox** milik Nusabackup. 
 - **Custom exporter**: tulis dalam Python, expose metrik dengan format Prometheus text exposition standar (gunakan library `prometheus_client`). Nama metrik pakai prefix `nusabackup_` (contoh: `nusabackup_backup_job_last_success_timestamp_seconds`, `nusabackup_backup_job_status`).
 - **Secrets**: JANGAN commit credential Proxmox API, token Telegram/bot, SMTP password, dsb. Gunakan `.env` (di-gitignore) atau secret manager, referensikan lewat environment variable di config.
 - **Naming label Prometheus**: gunakan label konsisten `instance`, `vm_name`, `node` (nama host Proxmox), dan `job` sesuai kategori exporter.
+- **README.md**: setiap kali sebuah fase (lihat PRD section 10) selesai dikerjakan dan sudah di-review/merge, update tabel status progres dan bagian ringkasan per-fase di `README.md` — jangan biarkan README ketinggalan dari state repo yang sebenarnya.
 - **Dashboard Grafana**: setiap dashboard baru harus datasource Prometheus yang sudah diprovisioning, bukan hardcode UID datasource.
 
 ## Command yang Sering Dipakai
