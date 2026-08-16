@@ -34,3 +34,10 @@ scrape_configs:
         replacement: pve-exporter:9221
       - target_label: node
         replacement: pve1
+
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          vm_name: monitoring-vm
+          node: pve1
