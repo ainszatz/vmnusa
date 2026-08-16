@@ -61,12 +61,13 @@ Catatan penting sebelum deploy ke VM nyata:
 
 ### Fase 2 — node_exporter + Dashboard Resource Dasar
 
-Selesai 2026-08-16. Dibangun: service `node-exporter` di `docker-compose.yml`, scrape job `node` di `prometheus/prometheus.yml`, dashboard Grafana `grafana/dashboards/vm-detail.json` (CPU, memory, disk, load average, uptime, network I/O).
+Selesai 2026-08-16. Dibangun: service `node-exporter` di `docker-compose.yml`, scrape job `node` di `prometheus/prometheus.yml`, dashboard Grafana `grafana/dashboards/vm-detail.json` (CPU, memory, disk, load average, uptime).
 
 Catatan penting:
 - `node_exporter` saat ini hanya memonitor VM monitoring itu sendiri (self-monitoring) — sesuai keputusan Fase 2, bukan VM produksi terpisah. Label `vm_name: monitoring-vm` di-hardcode di `prometheus/prometheus.yml`.
 - Saat VM produksi/kedua tersedia, perlu digeneralisasi: node_exporter dideploy ke VM target masing-masing, label `vm_name` per-target (bukan satu nilai statis), pertimbangkan Proxmox SD atau file-based service discovery untuk auto-discovery.
 - Dashboard `vm-detail.json` belum pernah benar-benar dibuka di Grafana sungguhan (validasi hanya JSON syntax check di sandbox) — verifikasi visual wajib dilakukan di monitoring VM nyata.
+- Panel "Network I/O" sengaja dihapus dari dashboard — `node-exporter` jalan di bridge network Docker sehingga metrik network yang ter-scrape adalah traffic container itu sendiri, bukan traffic VM sungguhan. Detail dan rencana perbaikan di `docs/deployment.md` (Known limitations).
 
 ## Keputusan yang Sudah Dikonfirmasi
 
