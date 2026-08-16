@@ -32,6 +32,16 @@
    - `pve-exporter` sengaja tidak di-expose ke host (tidak ada port mapping) — hanya bisa diakses lewat docker network internal oleh Prometheus. Jangan heran kalau `curl <monitoring-vm>:9221` gagal, itu memang disengaja.
    - Grafana: `http://<monitoring-vm>:3000` → login pakai `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` dari `.env` → Connections → Data sources → pastikan datasource `Prometheus` sudah otomatis terprovisioning dan status "Data source is working".
 
+## Firewall / Akses
+
+- Port Grafana (`3000`) di-bind ke semua interface (`0.0.0.0`) karena tim ops perlu mengakses dashboard dari luar monitoring VM. Batasi akses ini di firewall host ke subnet/VPN ops saja, jangan biarkan terbuka ke internet. Contoh dengan `ufw`:
+  ```bash
+  ufw allow from 10.0.0.0/24 to any port 3000 proto tcp
+  ufw deny 3000/tcp
+  ```
+  Atau dengan `nftables`, tambahkan rule yang hanya mengizinkan source IP/subnet VPN ops ke port 3000 dan menolak selainnya.
+- Untuk production, pertimbangkan menaruh reverse proxy (nginx/Caddy/Traefik) dengan TLS di depan Grafana alih-alih expose port 3000 langsung, terutama jika diakses lewat internet publik.
+
 ## Known limitations (Fase 1)
 - Baru mencakup 1 node Proxmox (`node: pve1` hardcoded di `prometheus/prometheus.yml`) — auto-discovery multi-node menyusul saat jumlah VM bertambah.
 - Alertmanager belum di-wire (target Fase 5 di PRD section 10) — `alerting.alertmanagers` di `prometheus.yml` sengaja kosong.

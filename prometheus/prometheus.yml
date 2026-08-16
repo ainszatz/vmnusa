@@ -20,9 +20,17 @@ scrape_configs:
 
   - job_name: pve
     static_configs:
-      - targets: ["pve-exporter:9221"]
-        labels:
-          node: pve1
+      # Ganti dengan hostname/IP node Proxmox asli sebelum deploy.
+      - targets: ["pve1.example.local"]
     metrics_path: /pve
     params:
       module: [default]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: pve-exporter:9221
+      - target_label: node
+        replacement: pve1
