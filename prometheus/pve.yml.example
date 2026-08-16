@@ -1,0 +1,7 @@
+# Copy this file to prometheus/pve.yml (gitignored) and fill in real credentials.
+# Do NOT commit prometheus/pve.yml.
+default:
+  user: monitoring@pve
+  token_name: prometheus
+  token_value: changeme-uuid-token
+  verify_ssl: false
