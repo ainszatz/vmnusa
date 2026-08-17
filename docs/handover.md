@@ -77,6 +77,7 @@ Daftar ini merangkum semua batasan yang sudah didokumentasikan sepanjang Fase 1-
 - **Service health cuma `up==0`**, bukan probe HTTP/TCP sungguhan — `blackbox_exporter` (PRD §6.4) belum pernah dideploy. "Node Proxmox offline" adalah proxy dari `up{job="pve"}==0` (pve-exporter gagal reach API), tidak bisa membedakan node down vs API down vs exporter sendiri bermasalah.
 - **Eskalasi critical adalah `repeat_interval: 15m`**, bukan acknowledgment-tracking sungguhan (perlu tool seperti Karma/PagerDuty untuk itu).
 - **Alertmanager sendiri belum di-scrape** — kalau Alertmanager mati, `MonitoringTargetDown` tidak akan mendeteksinya (Prometheus tidak tahu Alertmanager down). Ada alert `Watchdog` (`vector(1)`, selalu firing) sebagai dead-man's-switch parsial: kalau operator berhenti menerima pesan Watchdog secara berkala, itu tanda ada yang rusak di jalur Prometheus→Alertmanager→Telegram — tapi ini tidak spesifik menunjuk komponen mana yang mati.
+- **Prediksi "Hari Sampai Penuh" (Storage Capacity) pakai regresi linear sederhana** — belum memperhitungkan pola non-linear (mis. lonjakan mendadak saat backup besar), cukup untuk early-warning kasar bukan proyeksi presisi. Threshold warna (merah <7 hari, kuning <30 hari) adalah default yang dipilih sendiri, bukan dari PRD §7.1.
 - **Threshold masih draft PRD §7.1**, belum di-tuning dengan data produksi asli — lihat §4.
 - **Image Docker belum di-pin versi** (`:latest` di semua service) — pertimbangkan pin sebelum produksi jangka panjang.
 
