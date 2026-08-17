@@ -15,6 +15,12 @@ REQUIRED_FIELDS = {
     "size_bytes",
 }
 STATUS_VALUES = {"failed": 0, "success": 1, "running": 2}
+NUMERIC_FIELDS = (
+    "duration_seconds",
+    "last_success_timestamp",
+    "consecutive_failures",
+    "size_bytes",
+)
 
 
 class BackupJobCollector:
@@ -72,12 +78,21 @@ class BackupJobCollector:
             logger.warning("status_dir %s does not exist", self.status_dir)
             return
 
+        seen_job_names = set()
+
         for path in sorted(self.status_dir.glob("*.json")):
             try:
                 with open(path, "r", encoding="utf-8") as f:
                     record = json.load(f)
             except (json.JSONDecodeError, OSError) as exc:
                 logger.warning("skipping %s: %s", path, exc)
+                continue
+
+            if not isinstance(record, dict):
+                logger.warning(
+                    "skipping %s: expected a JSON object at top level, got %s",
+                    path, type(record).__name__,
+                )
                 continue
 
             missing = REQUIRED_FIELDS - record.keys()
@@ -88,5 +103,39 @@ class BackupJobCollector:
             if record["status"] not in STATUS_VALUES:
                 logger.warning("skipping %s: invalid status %r", path, record["status"])
                 continue
+
+            if not isinstance(record["job_name"], str):
+                logger.warning(
+                    "skipping %s: job_name must be a string, got %s",
+                    path, type(record["job_name"]).__name__,
+                )
+                continue
+
+            invalid_numeric = False
+            for field in NUMERIC_FIELDS:
+                try:
+                    record[field] = float(record[field])
+                except (TypeError, ValueError):
+                    logger.warning(
+                        "skipping %s: field %s has non-numeric value %r",
+                        path, field, record[field],
+                    )
+                    invalid_numeric = True
+                    break
+            if invalid_numeric:
+                continue
+
+            # job_name identifies the series, not the filename, so two files
+            # could declare the same job_name. Emitting duplicate label sets
+            # in one metric family makes Prometheus reject the whole scrape,
+            # so we keep the first record seen (by sorted filename order) and
+            # skip/warn on later duplicates.
+            if record["job_name"] in seen_job_names:
+                logger.warning(
+                    "skipping %s: duplicate job_name %r already seen in this collection",
+                    path, record["job_name"],
+                )
+                continue
+            seen_job_names.add(record["job_name"])
 
             yield record

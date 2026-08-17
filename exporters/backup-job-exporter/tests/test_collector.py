@@ -102,3 +102,57 @@ def test_invalid_status_value_is_skipped(tmp_path):
     samples = collect_samples(collector)
 
     assert samples["nusabackup_backup_job_status"] == {}
+
+
+def test_json_array_top_level_is_skipped(tmp_path):
+    (tmp_path / "array.json").write_text("[1, 2, 3]", encoding="utf-8")
+    collector = BackupJobCollector(str(tmp_path))
+    samples = collect_samples(collector)
+
+    assert samples["nusabackup_backup_job_status"] == {}
+
+
+def test_json_string_top_level_is_skipped(tmp_path):
+    (tmp_path / "string.json").write_text('"hello"', encoding="utf-8")
+    collector = BackupJobCollector(str(tmp_path))
+    samples = collect_samples(collector)
+
+    assert samples["nusabackup_backup_job_status"] == {}
+
+
+def test_null_numeric_field_is_skipped(tmp_path):
+    write_status(tmp_path, "null-duration.json", job_name="x", status="success",
+                 duration_seconds=None, last_success_timestamp=1, consecutive_failures=0, size_bytes=1)
+    collector = BackupJobCollector(str(tmp_path))
+    samples = collect_samples(collector)
+
+    assert samples["nusabackup_backup_job_status"] == {}
+
+
+def test_nested_object_numeric_field_is_skipped(tmp_path):
+    write_status(tmp_path, "object-duration.json", job_name="x", status="success",
+                 duration_seconds={"x": 1}, last_success_timestamp=1, consecutive_failures=0, size_bytes=1)
+    collector = BackupJobCollector(str(tmp_path))
+    samples = collect_samples(collector)
+
+    assert samples["nusabackup_backup_job_status"] == {}
+
+
+def test_non_string_job_name_is_skipped(tmp_path):
+    write_status(tmp_path, "int-job-name.json", job_name=123, status="success",
+                 duration_seconds=1, last_success_timestamp=1, consecutive_failures=0, size_bytes=1)
+    collector = BackupJobCollector(str(tmp_path))
+    samples = collect_samples(collector)
+
+    assert samples["nusabackup_backup_job_status"] == {}
+
+
+def test_duplicate_job_name_across_files_keeps_only_one_series(tmp_path):
+    write_status(tmp_path, "a.json", job_name="vm-backup", status="success", duration_seconds=1,
+                 last_success_timestamp=1, consecutive_failures=0, size_bytes=1)
+    write_status(tmp_path, "b.json", job_name="vm-backup", status="failed", duration_seconds=2,
+                 last_success_timestamp=2, consecutive_failures=5, size_bytes=2)
+    collector = BackupJobCollector(str(tmp_path))
+    samples = collect_samples(collector)
+
+    assert list(samples["nusabackup_backup_job_status"].keys()) == ["vm-backup"]
