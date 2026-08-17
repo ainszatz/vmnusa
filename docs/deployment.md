@@ -19,6 +19,7 @@
    ```bash
    docker compose config
    promtool check config prometheus/prometheus.yml
+   amtool check-config alertmanager/alertmanager.yml
    ```
 
 3. Jalankan stack:

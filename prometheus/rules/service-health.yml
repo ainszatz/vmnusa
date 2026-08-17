@@ -16,3 +16,10 @@ groups:
           severity: critical
         annotations:
           summary: "pve-exporter tidak bisa menjangkau Proxmox API -- node Proxmox atau API mungkin down (immediate, PRD 7.1)"
+
+      - alert: Watchdog
+        expr: vector(1)
+        labels:
+          severity: warning
+        annotations:
+          summary: "Dead-man's-switch: alert ini SELALU firing. Kalau operator TIDAK menerima pesan ini secara berkala, berarti jalur Prometheus->Alertmanager->Telegram sedang rusak."

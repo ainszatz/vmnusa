@@ -18,7 +18,7 @@ groups:
           summary: "Backup job {{ $labels.job_name }} gagal {{ $value }}x berturut-turut"
 
       - alert: BackupJobLate
-        expr: (time() - nusabackup_backup_job_last_success_timestamp_seconds) > 7200
+        expr: nusabackup_backup_job_last_success_timestamp_seconds > 0 and (time() - nusabackup_backup_job_last_success_timestamp_seconds) > 7200
         for: 0m
         labels:
           severity: warning
@@ -26,9 +26,17 @@ groups:
           summary: "Backup job {{ $labels.job_name }} terlambat >2 jam dari sukses terakhir"
 
       - alert: BackupJobVeryLate
-        expr: (time() - nusabackup_backup_job_last_success_timestamp_seconds) > 21600
+        expr: nusabackup_backup_job_last_success_timestamp_seconds > 0 and (time() - nusabackup_backup_job_last_success_timestamp_seconds) > 21600
         for: 0m
         labels:
           severity: critical
         annotations:
           summary: "Backup job {{ $labels.job_name }} terlambat >6 jam dari sukses terakhir"
+
+      - alert: BackupJobNeverSucceeded
+        expr: nusabackup_backup_job_last_success_timestamp_seconds == 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backup job {{ $labels.job_name }} belum pernah sukses sejak mulai dipantau"

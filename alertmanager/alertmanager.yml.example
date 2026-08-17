@@ -30,6 +30,13 @@ route:
       group_interval: 5m
       repeat_interval: 30m
 
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal: ['vm_name', 'exported_node', 'storage', 'job_name', 'instance']
+
 receivers:
   - name: telegram-critical
     telegram_configs:
@@ -37,7 +44,7 @@ receivers:
         chat_id: 000000000
         parse_mode: HTML
         message: |
-          🔴 <b>CRITICAL</b>: {{ .CommonLabels.alertname }}
+          {{ if eq .Status "firing" }}🔴 <b>CRITICAL</b>{{ else }}✅ <b>RESOLVED</b>{{ end }}: {{ .CommonLabels.alertname }}
           {{ range .Alerts }}{{ .Annotations.summary }}
           {{ end }}
 
@@ -47,6 +54,6 @@ receivers:
         chat_id: 000000000
         parse_mode: HTML
         message: |
-          🟡 <b>WARNING</b>: {{ .CommonLabels.alertname }}
+          {{ if eq .Status "firing" }}🟡 <b>WARNING</b>{{ else }}✅ <b>RESOLVED</b>{{ end }}: {{ .CommonLabels.alertname }}
           {{ range .Alerts }}{{ .Annotations.summary }}
           {{ end }}

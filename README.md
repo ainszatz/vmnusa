@@ -96,7 +96,7 @@ Selesai 2026-08-17. Dibangun: `alertmanager/alertmanager.yml.example` (routing T
 Catatan penting:
 - Eskalasi critical didekati dengan re-notifikasi tiap 15 menit (`repeat_interval`), bukan acknowledgment-tracking sungguhan -- lihat `docs/deployment.md` Known limitations.
 - Service health baru mencakup `up==0` (target Prometheus reachable/tidak), belum probe HTTP/TCP endpoint sungguhan (blackbox_exporter belum dideploy).
-- Threshold Memory/Disk/backup-job pakai durasi "for" default 5 menit yang dipilih sendiri (PRD §7.1 tidak menspesifikasikan durasi untuk metrik-metrik itu) -- tuning final menyusul di Fase 6.
+- Threshold Memory/Disk pakai durasi "for" default 5 menit yang dipilih sendiri (PRD §7.1 tidak menspesifikasikan durasi untuk metrik-metrik itu); rule backup-job pakai `for: 0m` (durasi "terlambat" sudah baked into threshold detik-nya sendiri) -- tuning final menyusul di Fase 6.
 - Belum pernah divalidasi dengan `promtool check rules` / `amtool check-config` sungguhan atau pesan Telegram nyata (tidak tersedia di sandbox pengembangan) -- wajib diverifikasi di monitoring VM sebelum go-live.
 
 ## Keputusan yang Sudah Dikonfirmasi
