@@ -32,13 +32,20 @@ Spesifikasi lengkap: [`PRD_Monitoring_VM_Nusabackup.md`](PRD_Monitoring_VM_Nusab
 │   └── provisioning/
 ├── exporters/
 │   └── backup-job-exporter/   # custom exporter status job backup (Fase 3)
+├── scripts/
+│   └── validate.sh            # validasi syntax YAML/JSON seluruh repo (Fase 6)
 └── docs/
-    └── deployment.md
+    ├── deployment.md
+    └── handover.md             # runbook operasional & handover (Fase 6)
 ```
 
 ## Deploy
 
 Lihat [`docs/deployment.md`](docs/deployment.md) untuk langkah setup, validasi, dan verifikasi lengkap.
+
+## Handover & Validasi
+
+Lihat [`docs/handover.md`](docs/handover.md) untuk panduan operasional, troubleshooting, cara tuning threshold, dan daftar keterbatasan yang perlu diketahui sebelum go-live. Jalankan `bash scripts/validate.sh` untuk validasi syntax semua file config sebelum deploy.
 
 ## Status Progres
 
@@ -49,7 +56,7 @@ Lihat [`docs/deployment.md`](docs/deployment.md) untuk langkah setup, validasi, 
 | 3 | Custom exporter status job backup + dashboard job | ✅ Selesai (exporter + dashboard; integrasi ke backup script asli menyusul) |
 | 4 | Storage capacity monitoring + prediksi kapasitas | ✅ Selesai |
 | 5 | Setup Alertmanager + rule threshold + integrasi Telegram | ✅ Selesai |
-| 6 | Testing, tuning threshold, dokumentasi & handover | ⬜ Belum mulai |
+| 6 | Testing, tuning threshold, dokumentasi & handover | ✅ Selesai (dokumentasi + validasi; testing nyata & tuning berbasis data produksi menyusul setelah deploy) |
 
 ### Fase 1 — Setup Monitoring VM + Prometheus + Grafana + Proxmox Exporter
 
@@ -57,7 +64,7 @@ Selesai 2026-08-16. Dibangun: `docker-compose.yml` (prometheus + pve-exporter + 
 
 Catatan penting sebelum deploy ke VM nyata:
 - Ganti placeholder `pve1.example.local` di `prometheus/prometheus.yml` dengan hostname/IP Proxmox asli.
-- Isi `prometheus/pve.yml` (copy dari `.example`) dan `.env` dengan kredensial token Proxmox asli.
+- Isi `prometheus/pve.yml` (copy dari `.example`) dengan kredensial token Proxmox asli — `.env` hanya untuk kredensial Grafana, bukan Proxmox.
 - `promtool check config` dan `docker compose config` belum pernah dijalankan sungguhan (tidak tersedia di sandbox pengembangan) — wajib dijalankan di monitoring VM sebelum go-live.
 - Belum di-pin versi image Docker (`:latest`) — pertimbangkan pin versi sebelum produksi.
 
@@ -96,12 +103,21 @@ Selesai 2026-08-17. Dibangun: `alertmanager/alertmanager.yml.example` (routing T
 Catatan penting:
 - Eskalasi critical didekati dengan re-notifikasi tiap 15 menit (`repeat_interval`), bukan acknowledgment-tracking sungguhan -- lihat `docs/deployment.md` Known limitations.
 - Service health baru mencakup `up==0` (target Prometheus reachable/tidak), belum probe HTTP/TCP endpoint sungguhan (blackbox_exporter belum dideploy).
-- Threshold Memory/Disk pakai durasi "for" default 5 menit yang dipilih sendiri (PRD §7.1 tidak menspesifikasikan durasi untuk metrik-metrik itu); rule backup-job pakai `for: 0m` (durasi "terlambat" sudah baked into threshold detik-nya sendiri) -- tuning final menyusul di Fase 6.
+- Threshold Memory/Disk pakai durasi "for" default 5 menit yang dipilih sendiri (PRD §7.1 tidak menspesifikasikan durasi untuk metrik-metrik itu); rule backup-job pakai `for: 0m` (durasi "terlambat" sudah baked into threshold detik-nya sendiri) -- tuning final berbasis data produksi diserahkan ke operator setelah deploy (lihat Fase 6).
 - Belum pernah divalidasi dengan `promtool check rules` / `amtool check-config` sungguhan atau pesan Telegram nyata (tidak tersedia di sandbox pengembangan) -- wajib diverifikasi di monitoring VM sebelum go-live.
+
+### Fase 6 — Handover, Dokumentasi & Validasi
+
+Selesai 2026-08-17. Dibangun: `scripts/validate.sh` (validasi syntax YAML/JSON otomatis untuk seluruh repo), `docs/handover.md` (runbook operasional, troubleshooting, cara tuning threshold, onboarding VM/job baru, konsolidasi known limitations, dan open questions PRD §12 yang belum terjawab).
+
+Catatan penting:
+- Testing nyata (`docker compose up`, trigger alert sungguhan, cek pesan Telegram) dan tuning threshold berbasis data produksi **tidak bisa dikerjakan di sandbox pengembangan** (tidak ada `docker`/`promtool`/`amtool`/Proxmox/Telegram nyata) — ini eksplisit diserahkan ke operator setelah deploy ke monitoring VM sungguhan, bukan diklaim selesai di sini.
+- 2 dari 5 open question PRD §12 masih belum terjawab: **siapa on-call/penerima alert critical**, dan **apakah butuh integrasi Loki**. Lihat `docs/handover.md` §8.
+- `scripts/validate.sh` benar-benar dijalankan di sandbox ini terhadap semua file config repo dan semuanya lolos syntax check — tapi ini cuma syntax, bukan pengganti `promtool`/`amtool`/`docker compose config`.
 
 ## Keputusan yang Sudah Dikonfirmasi
 
 - Channel alerting: **Telegram**
 - Sumber data status job backup: **custom exporter** (dibangun dari nol, bukan dari log/API existing)
 - Jumlah VM saat ini: **1**
-- Threshold alert: draft PRD §7.1 sudah dipakai di Fase 5, tuning final menyusul di Fase 6
+- Threshold alert: draft PRD §7.1 sudah dipakai di Fase 5; tuning final berbasis data produksi diserahkan ke operator setelah deploy (lihat Fase 6 dan `docs/handover.md` §4), bukan dikerjakan di sandbox pengembangan
