@@ -45,6 +45,15 @@ services:
     networks:
       - monitoring
 
+  backup-job-exporter:
+    build: ./exporters/backup-job-exporter
+    container_name: nusabackup-backup-job-exporter
+    restart: unless-stopped
+    volumes:
+      - ./exporters/backup-job-exporter/status:/status:ro
+    networks:
+      - monitoring
+
   grafana:
     image: grafana/grafana:latest
     container_name: nusabackup-grafana
