@@ -17,6 +17,7 @@
 
 2. Validasi config sebelum start (di monitoring VM, bukan di sandbox dev):
    ```bash
+   bash scripts/validate.sh
    docker compose config
    promtool check config prometheus/prometheus.yml
    amtool check-config alertmanager/alertmanager.yml

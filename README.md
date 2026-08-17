@@ -11,7 +11,7 @@ Spesifikasi lengkap: [`PRD_Monitoring_VM_Nusabackup.md`](PRD_Monitoring_VM_Nusab
 - **Alertmanager** — routing & notifikasi alert (Telegram)
 - **node_exporter** — metrik OS-level per VM
 - **prometheus-pve-exporter** — metrik host/VM dari Proxmox API
-- **blackbox_exporter** — probe HTTP/TCP/ICMP
+- **blackbox_exporter** — probe HTTP/TCP/ICMP (belum dideploy — lihat Known Limitations)
 - **Custom exporter** (Python) — status job backup, prefix metrik `nusabackup_`
 
 ## Struktur Direktori
@@ -121,3 +121,4 @@ Catatan penting:
 - Sumber data status job backup: **custom exporter** (dibangun dari nol, bukan dari log/API existing)
 - Jumlah VM saat ini: **1**
 - Threshold alert: draft PRD §7.1 sudah dipakai di Fase 5; tuning final berbasis data produksi diserahkan ke operator setelah deploy (lihat Fase 6 dan `docs/handover.md` §4), bukan dikerjakan di sandbox pengembangan
+- **Gap PRD yang terdeteksi di audit akhir Fase 6**: dashboard "Overview Cluster" (PRD §8, dashboard ke-4 dari 4 minimal) belum pernah dibuat di fase manapun, dan retention data metrik baru 30 hari raw tanpa tier downsampled 90 hari (PRD §9). Detail lihat `docs/handover.md` §7.

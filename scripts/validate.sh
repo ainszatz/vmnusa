@@ -5,7 +5,9 @@
 # next steps at the end of this script's output.
 set -uo pipefail
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
+
+python3 -c "import yaml" 2>/dev/null || { echo "ERROR: PyYAML tidak terinstall. Install dulu: pip install pyyaml"; exit 2; }
 
 fail=0
 

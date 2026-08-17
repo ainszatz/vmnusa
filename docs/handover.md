@@ -21,7 +21,7 @@ Semua komponen terhubung lewat Docker network internal `monitoring`. Detail konf
 
 - **Cek dashboard**: buka Grafana (`http://<monitoring-vm>:3000`, lewat VPN/firewall yang sudah dibatasi) → folder "Nusabackup Monitoring" → 3 dashboard: **VM Detail** (resource VM), **Backup Job Status** (status job backup), **Storage Capacity** (kapasitas & prediksi penuh).
 - **Kalau ada alert masuk ke Telegram**: pesan warning (🟡) berulang tiap 30 menit selama kondisi masih terjadi; pesan critical (🔴) berulang tiap 15 menit. Pesan yang sama datang lagi = **belum ditangani**, bukan false alarm berulang — ini adalah bentuk "eskalasi" yang dipakai sistem ini (lihat §7, sistem belum punya acknowledgment-tracking sungguhan). Alert yang sudah pulih akan dikirim ulang dengan tanda ✅ RESOLVED.
-- **Silence/maintenance window**: kalau mau maintenance terjadwal dan tidak mau di-spam alert, buat silence lewat Alertmanager UI (`http://localhost:9093` lewat SSH tunnel, lihat `docs/deployment.md`) atau `amtool silence add`. Ini fitur native Alertmanager, tidak perlu setup tambahan.
+- **Silence/maintenance window**: kalau mau maintenance terjadwal dan tidak mau di-spam alert, buat silence lewat Alertmanager UI (`http://localhost:9093` lewat SSH tunnel, lihat `docs/deployment.md`) atau `docker compose exec alertmanager amtool silence add alertname=<nama> --alertmanager.url=http://localhost:9093`. Ini fitur native Alertmanager, tidak perlu setup tambahan.
 
 ## 3. Troubleshooting Cepat
 
@@ -52,8 +52,8 @@ Tips kalibrasi setelah beberapa minggu berjalan di produksi:
 Saat ini sistem hanya memonitor 1 VM (VM monitoring itu sendiri, self-monitoring — lihat Known Limitations §7). Untuk menambah VM produksi:
 
 1. Deploy `node_exporter` di VM target (bisa docker-compose seperti contoh di `docker-compose.yml`, atau binary+systemd langsung).
-2. Tambah target baru di `prometheus/prometheus.yml`'s job `node` — untuk 1 VM tambahan, tambah `static_configs` baru dengan `targets` dan `labels.vm_name` yang beda. Untuk banyak VM ke depan, pertimbangkan Proxmox SD (`proxmox_sd_configs` di Prometheus) atau file-based service discovery alih-alih menambah baris manual satu-satu.
-3. Deploy dashboard `vm-detail.json` sudah otomatis mencakup VM baru (query-nya group by `vm_name`, tidak perlu dashboard terpisah per VM).
+2. Tambah target baru di `prometheus/prometheus.yml`'s job `node` — untuk 1 VM tambahan, tambah `static_configs` baru dengan `targets` dan `labels.vm_name` yang beda. Catatan: job `node` juga meng-hardcode label `node: pve1` (lihat §7) — kalau VM tambahan itu ada di Proxmox node yang BEDA dari `pve1`, label `node` di target barunya juga perlu diganti, bukan cuma `vm_name`. Untuk banyak VM ke depan, pertimbangkan Proxmox SD (`proxmox_sd_configs` di Prometheus) atau file-based service discovery alih-alih menambah baris manual satu-satu.
+3. Dashboard `vm-detail.json` sudah otomatis mencakup VM baru (query-nya group by `vm_name`, tidak perlu dashboard terpisah per VM).
 4. Tambah rule threshold di `prometheus/rules/resource.yml`/`storage.yml` biasanya tidak perlu diubah — rule-nya sudah generic per `vm_name`, akan otomatis mencakup VM baru begitu node_exporter-nya ter-scrape.
 
 ## 6. Onboarding Job Backup Baru
@@ -68,7 +68,9 @@ Saat ini sistem hanya memonitor 1 VM (VM monitoring itu sendiri, self-monitoring
 
 Daftar ini merangkum semua batasan yang sudah didokumentasikan sepanjang Fase 1-5 (detail lengkap tetap ada di `docs/deployment.md` Known Limitations dan `README.md` per-fase) — WAJIB DIBACA sebelum go-live produksi:
 
-- **Belum divalidasi dengan tooling asli**: `promtool check config/rules`, `amtool check-config`, `docker compose config`, dan pesan Telegram nyata belum pernah dijalankan (sandbox pengembangan tidak punya `docker`/`promtool`/`amtool`). Jalankan `scripts/validate.sh` PLUS keempat command di atas di monitoring VM sebelum go-live.
+- **Belum divalidasi dengan tooling asli**: `promtool check config/rules`, `amtool check-config`, `docker compose config`, dan pesan Telegram nyata belum pernah dijalankan (sandbox pengembangan tidak punya `docker`/`promtool`/`amtool`). Selain itu, dashboard Grafana (`vm-detail.json`, `backup-job-status.json`, `storage-capacity.json`) baru divalidasi dari sisi syntax JSON, belum pernah benar-benar dibuka di instance Grafana sungguhan, dan image Docker `backup-job-exporter` belum pernah di-build maupun dijalankan. Jalankan `scripts/validate.sh` PLUS keempat command di atas, buka tiap dashboard di Grafana, dan build/jalankan `backup-job-exporter` di monitoring VM sebelum go-live.
+- **Dashboard "Overview Cluster" (PRD §8, dashboard ke-4) belum pernah dibuat** di fase manapun — hanya 3 dari 4 dashboard minimal PRD yang ada (VM Detail, Backup Job Status, Storage Capacity). Overview Cluster seharusnya menampilkan status seluruh VM & Proxmox host dalam satu layar. Ini gap nyata dari PRD yang baru terdeteksi di audit akhir Fase 6 — perlu dikerjakan sebagai pekerjaan lanjutan, di luar scope Fase 1-6 yang sudah berjalan.
+- **Retention data metrik baru 30 hari (raw)**, belum ada tier downsampled 90 hari sesuai PRD §9 — butuh solusi tambahan (mis. Thanos, VictoriaMetrics, atau recording rules) untuk itu, di luar scope Fase 1-6.
 - **Baru 1 VM (self-monitoring)**: node_exporter, backup-job-exporter, semua label `vm_name` masih hardcode ke `monitoring-vm`. Lihat §5 untuk cara generalisasi.
 - **Label `node` di job `pve` selalu `pve1`** (hardcoded di `relabel_configs`, Fase 1) — nama node Proxmox asli ada di label `exported_node`. Dashboard Storage Capacity sudah pakai `exported_node`, tapi query manual di Prometheus/Grafana Explore bisa membingungkan kalau tidak tahu ini.
 - **Panel Network I/O sengaja tidak ada** di dashboard VM Detail — `node-exporter` jalan di bridge network Docker, metrik network yang ter-scrape adalah traffic container, bukan VM. Perlu `network_mode: host` untuk data akurat (scope lebih besar, ditunda).
