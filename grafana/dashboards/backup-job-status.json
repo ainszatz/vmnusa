@@ -1,0 +1,149 @@
+{
+  "title": "Backup Job Status",
+  "uid": "backup-job-status",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "timezone": "browser",
+  "time": { "from": "now-24h", "to": "now" },
+  "refresh": "1m",
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0,
+        "refresh": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Status Job Terakhir",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "Failed", "color": "red" },
+                "1": { "text": "Success", "color": "green" },
+                "2": { "text": "Running", "color": "blue" }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "nusabackup_backup_job_status",
+          "legendFormat": "{{job_name}}",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Waktu Sejak Sukses Terakhir",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 7200 },
+              { "color": "red", "value": 21600 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "time() - nusabackup_backup_job_last_success_timestamp_seconds",
+          "legendFormat": "{{job_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Kegagalan Berturut-turut",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 2 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "nusabackup_backup_job_consecutive_failures",
+          "legendFormat": "{{job_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Ukuran Data Backup Terakhir",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "nusabackup_backup_job_size_bytes",
+          "legendFormat": "{{job_name}}",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Tren Durasi Backup",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "fieldConfig": {
+        "defaults": { "unit": "s" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "nusabackup_backup_job_duration_seconds",
+          "legendFormat": "{{job_name}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}
