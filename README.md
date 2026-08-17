@@ -46,7 +46,7 @@ Lihat [`docs/deployment.md`](docs/deployment.md) untuk langkah setup, validasi, 
 | 1 | Setup monitoring VM + Prometheus + Grafana + Proxmox exporter | ✅ Selesai |
 | 2 | Deploy node_exporter ke semua VM, dashboard resource dasar | ✅ Selesai (1 VM, self-monitoring) |
 | 3 | Custom exporter status job backup + dashboard job | ✅ Selesai (exporter + dashboard; integrasi ke backup script asli menyusul) |
-| 4 | Storage capacity monitoring + prediksi kapasitas | ⬜ Belum mulai |
+| 4 | Storage capacity monitoring + prediksi kapasitas | ✅ Selesai |
 | 5 | Setup Alertmanager + rule threshold + integrasi Telegram | ⬜ Belum mulai |
 | 6 | Testing, tuning threshold, dokumentasi & handover | ⬜ Belum mulai |
 
@@ -78,6 +78,15 @@ Catatan penting:
 - Exporter membaca kontrak file JSON per-job dari `exporters/backup-job-exporter/status/` (lihat `exporters/backup-job-exporter/README.md` untuk skema lengkap) — **belum terhubung ke script backup Nusabackup yang sebenarnya**. Sampai integrasi itu dibuat, dashboard Backup Job Status akan kosong.
 - Metrik: `nusabackup_backup_job_status` (1=success, 0=failed, 2=running), `nusabackup_backup_job_duration_seconds`, `nusabackup_backup_job_last_success_timestamp_seconds`, `nusabackup_backup_job_consecutive_failures`, `nusabackup_backup_job_size_bytes`.
 - `collector.py` punya 8 unit test (pytest) yang jalan bersih di sandbox pengembangan — build image Docker & jalan sungguhan di monitoring VM belum pernah divalidasi (tidak ada `docker` di sandbox ini).
+
+### Fase 4 — Storage Capacity Dashboard
+
+Selesai 2026-08-17. Dibangun: dashboard Grafana `grafana/dashboards/storage-capacity.json` (usage % per storage pool Proxmox, usage % disk VM, tren kapasitas storage pool, dan 2 panel prediksi "hari sampai penuh" berbasis regresi linear). Tidak ada exporter atau scrape job baru — metrik `pve_disk_size_bytes`/`pve_disk_usage_bytes`/`pve_storage_info` (dari job `pve`, Fase 1) dan `node_filesystem_*` (dari job `node`, Fase 2) sudah mengalir sejak fase-fase sebelumnya.
+
+Catatan penting:
+- Panel prediksi butuh minimal 6 jam histori scrape sebelum menampilkan angka (kosong di awal itu normal).
+- Prediksi pakai regresi linear sederhana, belum memperhitungkan pola non-linear — cukup untuk early-warning kasar, bukan proyeksi presisi.
+- Threshold warna panel prediksi (merah <7 hari, kuning <30 hari) adalah default yang dipilih sendiri, bukan dari PRD §7.1 — PRD hanya mengatur threshold usage % (>80% warning, >90% critical), yang sudah dipakai di panel usage.
 
 ## Keputusan yang Sudah Dikonfirmasi
 
