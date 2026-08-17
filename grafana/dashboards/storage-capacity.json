@@ -42,8 +42,8 @@
       },
       "targets": [
         {
-          "expr": "(pve_disk_usage_bytes / pve_disk_size_bytes * 100) * on(id) group_left(node, storage) pve_storage_info",
-          "legendFormat": "{{node}}/{{storage}}",
+          "expr": "(pve_disk_usage_bytes / pve_disk_size_bytes * 100) * on(id) group_left(exported_node, storage) pve_storage_info",
+          "legendFormat": "{{exported_node}}/{{storage}}",
           "refId": "A",
           "format": "table",
           "instant": true
@@ -84,12 +84,13 @@
       "id": 3,
       "title": "Prediksi Hari Sampai Penuh — Storage Pool",
       "type": "stat",
-      "description": "Estimasi berdasarkan regresi linear tren pemakaian 6 jam terakhir. Nilai negatif atau sangat besar berarti storage pool sedang TIDAK bertumbuh (stabil/mengecil) -- itu bukan bug, memang begitu hasil regresi linear untuk kasus tersebut. Hanya nilai positif yang bermakna sebagai estimasi waktu sampai penuh. Butuh minimal 6 jam histori scrape sebelum panel ini menampilkan data.",
+      "description": "Estimasi berdasarkan regresi linear tren pemakaian 6 jam terakhir. Hanya nilai positif (sedang bertumbuh) yang ditampilkan sebagai estimasi waktu sampai penuh -- saat storage TIDAK bertumbuh (stabil/mengecil), panel menampilkan 'Tidak bertumbuh', itu bukan bug. Panel mulai menampilkan angka setelah ~1-2 menit (begitu ada 2 sample scrape), tapi estimasinya baru cukup bermakna setelah beberapa jam data terkumpul -- anggap angka di jam-jam pertama sebagai noise, bukan sinyal akurat.",
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
       "fieldConfig": {
         "defaults": {
           "unit": "d",
+          "noValue": "Tidak bertumbuh",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -103,8 +104,8 @@
       },
       "targets": [
         {
-          "expr": "((pve_disk_size_bytes - pve_disk_usage_bytes) / deriv(pve_disk_usage_bytes[6h]) / 86400) * on(id) group_left(node, storage) pve_storage_info",
-          "legendFormat": "{{node}}/{{storage}}",
+          "expr": "((pve_disk_size_bytes - pve_disk_usage_bytes) / deriv(pve_disk_usage_bytes[6h]) / 86400 > 0) * on(id) group_left(exported_node, storage) pve_storage_info",
+          "legendFormat": "{{exported_node}}/{{storage}}",
           "refId": "A"
         }
       ]
@@ -113,12 +114,13 @@
       "id": 5,
       "title": "Prediksi Hari Sampai Penuh — VM Disk",
       "type": "stat",
-      "description": "Estimasi berdasarkan regresi linear tren pemakaian 6 jam terakhir. Nilai negatif atau sangat besar berarti disk VM sedang TIDAK bertumbuh (stabil/mengecil) -- itu bukan bug, memang begitu hasil regresi linear untuk kasus tersebut. Hanya nilai positif yang bermakna sebagai estimasi waktu sampai penuh. Butuh minimal 6 jam histori scrape sebelum panel ini menampilkan data.",
+      "description": "Estimasi berdasarkan regresi linear tren pemakaian 6 jam terakhir. Hanya nilai positif (sedang bertumbuh) yang ditampilkan sebagai estimasi waktu sampai penuh -- saat disk VM TIDAK bertumbuh (stabil/mengecil), panel menampilkan 'Tidak bertumbuh', itu bukan bug. Panel mulai menampilkan angka setelah ~1-2 menit (begitu ada 2 sample scrape), tapi estimasinya baru cukup bermakna setelah beberapa jam data terkumpul -- anggap angka di jam-jam pertama sebagai noise, bukan sinyal akurat.",
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
       "fieldConfig": {
         "defaults": {
           "unit": "d",
+          "noValue": "Tidak bertumbuh",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -132,7 +134,7 @@
       },
       "targets": [
         {
-          "expr": "-node_filesystem_avail_bytes{job=\"node\", mountpoint=\"/\"} / deriv(node_filesystem_avail_bytes{job=\"node\", mountpoint=\"/\"}[6h]) / 86400",
+          "expr": "(-node_filesystem_avail_bytes{job=\"node\", mountpoint=\"/\"} / deriv(node_filesystem_avail_bytes{job=\"node\", mountpoint=\"/\"}[6h]) / 86400) > 0",
           "legendFormat": "{{vm_name}}",
           "refId": "A"
         }
@@ -150,9 +152,14 @@
       },
       "targets": [
         {
-          "expr": "pve_disk_usage_bytes * on(id) group_left(node, storage) pve_storage_info",
-          "legendFormat": "{{node}}/{{storage}}",
+          "expr": "pve_disk_usage_bytes * on(id) group_left(exported_node, storage) pve_storage_info",
+          "legendFormat": "{{exported_node}}/{{storage}}",
           "refId": "A"
+        },
+        {
+          "expr": "pve_disk_size_bytes * on(id) group_left(exported_node, storage) pve_storage_info",
+          "legendFormat": "{{exported_node}}/{{storage}} (kapasitas)",
+          "refId": "B"
         }
       ]
     }

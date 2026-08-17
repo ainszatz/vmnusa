@@ -84,7 +84,7 @@ Catatan penting:
 Selesai 2026-08-17. Dibangun: dashboard Grafana `grafana/dashboards/storage-capacity.json` (usage % per storage pool Proxmox, usage % disk VM, tren kapasitas storage pool, dan 2 panel prediksi "hari sampai penuh" berbasis regresi linear). Tidak ada exporter atau scrape job baru — metrik `pve_disk_size_bytes`/`pve_disk_usage_bytes`/`pve_storage_info` (dari job `pve`, Fase 1) dan `node_filesystem_*` (dari job `node`, Fase 2) sudah mengalir sejak fase-fase sebelumnya.
 
 Catatan penting:
-- Panel prediksi butuh minimal 6 jam histori scrape sebelum menampilkan angka (kosong di awal itu normal).
+- Panel prediksi mulai menampilkan angka setelah ~1-2 menit (begitu ada 2 sample scrape), tapi estimasinya baru cukup bermakna setelah beberapa jam data terkumpul — anggap angka di jam-jam pertama sebagai noise, bukan sinyal akurat.
 - Prediksi pakai regresi linear sederhana, belum memperhitungkan pola non-linear — cukup untuk early-warning kasar, bukan proyeksi presisi.
 - Threshold warna panel prediksi (merah <7 hari, kuning <30 hari) adalah default yang dipilih sendiri, bukan dari PRD §7.1 — PRD hanya mengatur threshold usage % (>80% warning, >90% critical), yang sudah dipakai di panel usage.
 
