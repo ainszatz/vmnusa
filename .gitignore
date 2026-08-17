@@ -11,3 +11,6 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# backup-job-exporter runtime status files (not the .gitkeep placeholder)
+exporters/backup-job-exporter/status/*.json
