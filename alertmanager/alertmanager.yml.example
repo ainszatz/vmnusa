@@ -1,0 +1,52 @@
+# Copy this file to alertmanager/alertmanager.yml (gitignored) and fill in real Telegram credentials.
+# Do NOT commit alertmanager/alertmanager.yml.
+#
+# To get a bot_token: message @BotFather on Telegram, /newbot, follow prompts.
+# To get a chat_id: message your new bot once, then visit
+#   https://api.telegram.org/bot<TOKEN>/getUpdates
+#   and read the "chat":{"id": ...} field in the response. Full steps in docs/deployment.md.
+
+global:
+  resolve_timeout: 5m
+  telegram_api_url: https://api.telegram.org
+
+route:
+  receiver: telegram-warning
+  group_by: ['alertname', 'vm_name']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: telegram-critical
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 15m
+    - matchers:
+        - severity="warning"
+      receiver: telegram-warning
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 30m
+
+receivers:
+  - name: telegram-critical
+    telegram_configs:
+      - bot_token: "changeme-bot-token"
+        chat_id: 000000000
+        parse_mode: HTML
+        message: |
+          🔴 <b>CRITICAL</b>: {{ .CommonLabels.alertname }}
+          {{ range .Alerts }}{{ .Annotations.summary }}
+          {{ end }}
+
+  - name: telegram-warning
+    telegram_configs:
+      - bot_token: "changeme-bot-token"
+        chat_id: 000000000
+        parse_mode: HTML
+        message: |
+          🟡 <b>WARNING</b>: {{ .CommonLabels.alertname }}
+          {{ range .Alerts }}{{ .Annotations.summary }}
+          {{ end }}

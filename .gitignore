@@ -1,6 +1,7 @@
 # Secrets
 .env
 prometheus/pve.yml
+alertmanager/alertmanager.yml
 
 # OS/editor
 .DS_Store
