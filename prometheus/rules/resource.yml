@@ -1,0 +1,34 @@
+groups:
+  - name: resource
+    rules:
+      - alert: CPUUsageWarning
+        expr: 100 - (avg by (vm_name) (rate(node_cpu_seconds_total{job="node", mode="idle"}[5m])) * 100) > 75
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU usage tinggi di {{ $labels.vm_name }} ({{ $value | printf \"%.1f\" }}%)"
+
+      - alert: CPUUsageCritical
+        expr: 100 - (avg by (vm_name) (rate(node_cpu_seconds_total{job="node", mode="idle"}[5m])) * 100) > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CPU usage KRITIS di {{ $labels.vm_name }} ({{ $value | printf \"%.1f\" }}%)"
+
+      - alert: MemoryUsageWarning
+        expr: (1 - (node_memory_MemAvailable_bytes{job="node"} / node_memory_MemTotal_bytes{job="node"})) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Memory usage tinggi di {{ $labels.vm_name }} ({{ $value | printf \"%.1f\" }}%)"
+
+      - alert: MemoryUsageCritical
+        expr: (1 - (node_memory_MemAvailable_bytes{job="node"} / node_memory_MemTotal_bytes{job="node"})) * 100 > 95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Memory usage KRITIS di {{ $labels.vm_name }} ({{ $value | printf \"%.1f\" }}%)"
