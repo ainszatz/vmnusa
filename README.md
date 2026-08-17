@@ -27,7 +27,7 @@ Spesifikasi lengkap: [`PRD_Monitoring_VM_Nusabackup.md`](PRD_Monitoring_VM_Nusab
 │   └── rules/                # alerting rules — kosong sampai Fase 5
 ├── alertmanager/              # belum ada — Fase 5
 ├── grafana/
-│   ├── dashboards/            # JSON dashboard (vm-detail, backup-job-status)
+│   ├── dashboards/            # JSON dashboard (vm-detail, backup-job-status, storage-capacity)
 │   └── provisioning/
 ├── exporters/
 │   └── backup-job-exporter/   # custom exporter status job backup (Fase 3)
