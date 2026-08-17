@@ -44,7 +44,7 @@ Lihat [`docs/deployment.md`](docs/deployment.md) untuk langkah setup, validasi, 
 |---|---|---|
 | 1 | Setup monitoring VM + Prometheus + Grafana + Proxmox exporter | ✅ Selesai |
 | 2 | Deploy node_exporter ke semua VM, dashboard resource dasar | ✅ Selesai (1 VM, self-monitoring) |
-| 3 | Custom exporter status job backup + dashboard job | ⬜ Belum mulai |
+| 3 | Custom exporter status job backup + dashboard job | ✅ Selesai (exporter + dashboard; integrasi ke backup script asli menyusul) |
 | 4 | Storage capacity monitoring + prediksi kapasitas | ⬜ Belum mulai |
 | 5 | Setup Alertmanager + rule threshold + integrasi Telegram | ⬜ Belum mulai |
 | 6 | Testing, tuning threshold, dokumentasi & handover | ⬜ Belum mulai |
@@ -68,6 +68,15 @@ Catatan penting:
 - Saat VM produksi/kedua tersedia, perlu digeneralisasi: node_exporter dideploy ke VM target masing-masing, label `vm_name` per-target (bukan satu nilai statis), pertimbangkan Proxmox SD atau file-based service discovery untuk auto-discovery.
 - Dashboard `vm-detail.json` belum pernah benar-benar dibuka di Grafana sungguhan (validasi hanya JSON syntax check di sandbox) — verifikasi visual wajib dilakukan di monitoring VM nyata.
 - Panel "Network I/O" sengaja dihapus dari dashboard — `node-exporter` jalan di bridge network Docker sehingga metrik network yang ter-scrape adalah traffic container itu sendiri, bukan traffic VM sungguhan. Detail dan rencana perbaikan di `docs/deployment.md` (Known limitations).
+
+### Fase 3 — Custom Backup-Job Exporter + Dashboard Job
+
+Selesai 2026-08-16. Dibangun: exporter Python `exporters/backup-job-exporter/` (`collector.py` dengan test TDD, `main.py`, `Dockerfile`), service `backup-job-exporter` di `docker-compose.yml`, scrape job `backup` di `prometheus/prometheus.yml`, dashboard Grafana `grafana/dashboards/backup-job-status.json` (status terakhir, waktu sejak sukses, kegagalan berturut-turut, ukuran data, tren durasi).
+
+Catatan penting:
+- Exporter membaca kontrak file JSON per-job dari `exporters/backup-job-exporter/status/` (lihat `exporters/backup-job-exporter/README.md` untuk skema lengkap) — **belum terhubung ke script backup Nusabackup yang sebenarnya**. Sampai integrasi itu dibuat, dashboard Backup Job Status akan kosong.
+- Metrik: `nusabackup_backup_job_status` (1=success, 0=failed, 2=running), `nusabackup_backup_job_duration_seconds`, `nusabackup_backup_job_last_success_timestamp_seconds`, `nusabackup_backup_job_consecutive_failures`, `nusabackup_backup_job_size_bytes`.
+- `collector.py` punya 8 unit test (pytest) yang jalan bersih di sandbox pengembangan — build image Docker & jalan sungguhan di monitoring VM belum pernah divalidasi (tidak ada `docker` di sandbox ini).
 
 ## Keputusan yang Sudah Dikonfirmasi
 
