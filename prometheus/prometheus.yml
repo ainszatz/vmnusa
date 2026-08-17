@@ -10,8 +10,7 @@ rule_files:
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: []
-          # Alertmanager wiring lands in Fase 5 (PRD section 10) — left empty for now.
+        - targets: ["alertmanager:9093"]
 
 scrape_configs:
   - job_name: prometheus

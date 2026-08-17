@@ -16,6 +16,22 @@ services:
       - monitoring
     depends_on:
       - pve-exporter
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: nusabackup-alertmanager
+    restart: unless-stopped
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    ports:
+      - "127.0.0.1:9093:9093"
+    networks:
+      - monitoring
 
   pve-exporter:
     image: prompve/prometheus-pve-exporter:latest
@@ -80,3 +96,4 @@ networks:
 volumes:
   prometheus-data:
   grafana-data:
+  alertmanager-data:
