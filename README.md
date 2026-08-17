@@ -24,8 +24,9 @@ Spesifikasi lengkap: [`PRD_Monitoring_VM_Nusabackup.md`](PRD_Monitoring_VM_Nusab
 ├── prometheus/
 │   ├── prometheus.yml
 │   ├── pve.yml.example      # copy ke pve.yml (gitignored) sebelum deploy
-│   └── rules/                # alerting rules — kosong sampai Fase 5
-├── alertmanager/              # belum ada — Fase 5
+│   └── rules/                # alerting rules (resource, storage, backup-job, service-health)
+├── alertmanager/
+│   └── alertmanager.yml.example   # copy ke alertmanager.yml (gitignored) sebelum deploy
 ├── grafana/
 │   ├── dashboards/            # JSON dashboard (vm-detail, backup-job-status, storage-capacity)
 │   └── provisioning/
@@ -47,7 +48,7 @@ Lihat [`docs/deployment.md`](docs/deployment.md) untuk langkah setup, validasi, 
 | 2 | Deploy node_exporter ke semua VM, dashboard resource dasar | ✅ Selesai (1 VM, self-monitoring) |
 | 3 | Custom exporter status job backup + dashboard job | ✅ Selesai (exporter + dashboard; integrasi ke backup script asli menyusul) |
 | 4 | Storage capacity monitoring + prediksi kapasitas | ✅ Selesai |
-| 5 | Setup Alertmanager + rule threshold + integrasi Telegram | ⬜ Belum mulai |
+| 5 | Setup Alertmanager + rule threshold + integrasi Telegram | ✅ Selesai |
 | 6 | Testing, tuning threshold, dokumentasi & handover | ⬜ Belum mulai |
 
 ### Fase 1 — Setup Monitoring VM + Prometheus + Grafana + Proxmox Exporter
@@ -88,9 +89,19 @@ Catatan penting:
 - Prediksi pakai regresi linear sederhana, belum memperhitungkan pola non-linear — cukup untuk early-warning kasar, bukan proyeksi presisi.
 - Threshold warna panel prediksi (merah <7 hari, kuning <30 hari) adalah default yang dipilih sendiri, bukan dari PRD §7.1 — PRD hanya mengatur threshold usage % (>80% warning, >90% critical), yang sudah dipakai di panel usage.
 
+### Fase 5 — Alertmanager + Alerting Rules + Telegram
+
+Selesai 2026-08-17. Dibangun: `alertmanager/alertmanager.yml.example` (routing Telegram, critical repeat 15 menit, warning repeat 30 menit), 4 file rule alert di `prometheus/rules/` (`resource.yml`, `storage.yml`, `backup-job.yml`, `service-health.yml`) sesuai threshold draft PRD §7.1, service `alertmanager` di `docker-compose.yml`, dan wiring `alerting.alertmanagers` di `prometheus/prometheus.yml`.
+
+Catatan penting:
+- Eskalasi critical didekati dengan re-notifikasi tiap 15 menit (`repeat_interval`), bukan acknowledgment-tracking sungguhan -- lihat `docs/deployment.md` Known limitations.
+- Service health baru mencakup `up==0` (target Prometheus reachable/tidak), belum probe HTTP/TCP endpoint sungguhan (blackbox_exporter belum dideploy).
+- Threshold Memory/Disk/backup-job pakai durasi "for" default 5 menit yang dipilih sendiri (PRD §7.1 tidak menspesifikasikan durasi untuk metrik-metrik itu) -- tuning final menyusul di Fase 6.
+- Belum pernah divalidasi dengan `promtool check rules` / `amtool check-config` sungguhan atau pesan Telegram nyata (tidak tersedia di sandbox pengembangan) -- wajib diverifikasi di monitoring VM sebelum go-live.
+
 ## Keputusan yang Sudah Dikonfirmasi
 
 - Channel alerting: **Telegram**
 - Sumber data status job backup: **custom exporter** (dibangun dari nol, bukan dari log/API existing)
 - Jumlah VM saat ini: **1**
-- Threshold alert: pakai draft di PRD §7.1 dulu, akan disesuaikan di Fase 5/6
+- Threshold alert: draft PRD §7.1 sudah dipakai di Fase 5, tuning final menyusul di Fase 6
