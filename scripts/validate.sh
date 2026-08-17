@@ -18,7 +18,7 @@ while IFS= read -r -d '' f; do
     python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))" "$f"
     fail=1
   fi
-done < <(find . -type f \( -name "*.yml" -o -name "*.yaml" \) -not -path "./.git/*" -print0)
+done < <(find . -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.yml.example" -o -name "*.yaml.example" \) -not -path "./.git/*" -print0)
 
 echo
 echo "== Validating JSON syntax =="
