@@ -1,0 +1,18 @@
+groups:
+  - name: service-health
+    rules:
+      - alert: MonitoringTargetDown
+        expr: up{job=~"prometheus|node|backup"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Target monitoring {{ $labels.job }} ({{ $labels.instance }}) tidak merespons >2 menit"
+
+      - alert: ProxmoxUnreachable
+        expr: up{job="pve"} == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "pve-exporter tidak bisa menjangkau Proxmox API -- node Proxmox atau API mungkin down (immediate, PRD 7.1)"
