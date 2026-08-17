@@ -1,0 +1,160 @@
+{
+  "title": "Storage Capacity",
+  "uid": "storage-capacity",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "timezone": "browser",
+  "time": { "from": "now-7d", "to": "now" },
+  "refresh": "5m",
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0,
+        "refresh": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Storage Pool Usage (%)",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 80 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "(pve_disk_usage_bytes / pve_disk_size_bytes * 100) * on(id) group_left(node, storage) pve_storage_info",
+          "legendFormat": "{{node}}/{{storage}}",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "VM Disk Usage (%)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 80 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "100 - ((node_filesystem_avail_bytes{job=\"node\", mountpoint=\"/\"} / node_filesystem_size_bytes{job=\"node\", mountpoint=\"/\"}) * 100)",
+          "legendFormat": "{{vm_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Prediksi Hari Sampai Penuh — Storage Pool",
+      "type": "stat",
+      "description": "Estimasi berdasarkan regresi linear tren pemakaian 6 jam terakhir. Nilai negatif atau sangat besar berarti storage pool sedang TIDAK bertumbuh (stabil/mengecil) -- itu bukan bug, memang begitu hasil regresi linear untuk kasus tersebut. Hanya nilai positif yang bermakna sebagai estimasi waktu sampai penuh. Butuh minimal 6 jam histori scrape sebelum panel ini menampilkan data.",
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "d",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 7 },
+              { "color": "green", "value": 30 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "((pve_disk_size_bytes - pve_disk_usage_bytes) / deriv(pve_disk_usage_bytes[6h]) / 86400) * on(id) group_left(node, storage) pve_storage_info",
+          "legendFormat": "{{node}}/{{storage}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Prediksi Hari Sampai Penuh — VM Disk",
+      "type": "stat",
+      "description": "Estimasi berdasarkan regresi linear tren pemakaian 6 jam terakhir. Nilai negatif atau sangat besar berarti disk VM sedang TIDAK bertumbuh (stabil/mengecil) -- itu bukan bug, memang begitu hasil regresi linear untuk kasus tersebut. Hanya nilai positif yang bermakna sebagai estimasi waktu sampai penuh. Butuh minimal 6 jam histori scrape sebelum panel ini menampilkan data.",
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "d",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 7 },
+              { "color": "green", "value": 30 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "-node_filesystem_avail_bytes{job=\"node\", mountpoint=\"/\"} / deriv(node_filesystem_avail_bytes{job=\"node\", mountpoint=\"/\"}[6h]) / 86400",
+          "legendFormat": "{{vm_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Storage Pool Capacity Trend",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "pve_disk_usage_bytes * on(id) group_left(node, storage) pve_storage_info",
+          "legendFormat": "{{node}}/{{storage}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}
