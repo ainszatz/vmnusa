@@ -28,10 +28,11 @@
 4. Verifikasi:
    - Prometheus: port Prometheus di-bind ke `127.0.0.1:9090` di monitoring VM (loopback-only, tidak bisa diakses langsung dari browser di komputer lain). Cara verifikasi:
      - Dari monitoring VM langsung: `curl http://127.0.0.1:9090/-/healthy` (harus mengembalikan `Prometheus Server is Healthy.`).
-     - Dari komputer lain, buat SSH tunnel dulu: `ssh -L 9090:127.0.0.1:9090 user@monitoring-vm`, lalu buka `http://localhost:9090` di browser lokal → Status → Targets → pastikan job `prometheus`, `pve`, dan `node` semuanya `UP`.
+     - Dari komputer lain, buat SSH tunnel dulu: `ssh -L 9090:127.0.0.1:9090 user@monitoring-vm`, lalu buka `http://localhost:9090` di browser lokal → Status → Targets → pastikan job `prometheus`, `pve`, `node`, dan `backup` semuanya `UP`.
    - `pve-exporter` sengaja tidak di-expose ke host (tidak ada port mapping) — hanya bisa diakses lewat docker network internal oleh Prometheus. Jangan heran kalau `curl <monitoring-vm>:9221` gagal, itu memang disengaja.
    - Grafana: `http://<monitoring-vm>:3000` → login pakai `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` dari `.env` → Connections → Data sources → pastikan datasource `Prometheus` sudah otomatis terprovisioning dan status "Data source is working".
    - Grafana → Dashboards → folder "Nusabackup Monitoring" → dashboard **VM Detail** harus menampilkan data CPU/memory/disk/load/uptime dalam beberapa menit setelah stack jalan (tunggu minimal 1 scrape interval, 30 detik).
+   - Grafana → Dashboards → folder "Nusabackup Monitoring" → dashboard **Backup Job Status** akan kosong sampai ada file JSON status job ditulis ke `exporters/backup-job-exporter/status/` (lihat kontrak di `exporters/backup-job-exporter/README.md`) — kosong itu normal untuk instalasi baru, bukan tanda error.
 
 ## Firewall / Akses
 
@@ -50,3 +51,4 @@
 - Custom backup-job exporter belum dideploy (Fase 3).
 - Panel "Network I/O" sengaja TIDAK ada di dashboard VM Detail: `node-exporter` berjalan di bridge network Docker (bukan host network), sehingga metrik network yang di-scrape adalah traffic interface container itu sendiri, bukan traffic VM sungguhan — datanya akan terlihat masuk akal tapi salah. Untuk network throughput yang akurat, `node-exporter` perlu `network_mode: host` (retarget scrape job ke `host.docker.internal:9100`, dan tambah rule firewall untuk port 9100 di host) — ditunda ke fase berikutnya karena scope-nya lebih besar dari "dashboard resource dasar".
 - Dashboard VM Detail belum mencakup Disk I/O (read/write throughput, IOPS) dari PRD §6.1 — baru mencakup kapasitas disk (%). Menyusul di fase berikutnya.
+- `backup-job-exporter` belum terhubung ke scheduler/log backup Nusabackup yang sebenarnya — exporter ini hanya membaca file JSON dari `exporters/backup-job-exporter/status/` sesuai kontrak di `exporters/backup-job-exporter/README.md`. Menghubungkan script backup Nusabackup asli untuk menulis ke direktori ini adalah pekerjaan fase berikutnya, bukan bagian dari Fase 3.
