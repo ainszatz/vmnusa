@@ -33,7 +33,8 @@ Spesifikasi lengkap: [`PRD_Monitoring_VM_Nusabackup.md`](PRD_Monitoring_VM_Nusab
 ├── exporters/
 │   └── backup-job-exporter/   # custom exporter status job backup (Fase 3)
 ├── scripts/
-│   └── validate.sh            # validasi syntax YAML/JSON seluruh repo (Fase 6)
+│   ├── validate.sh             # validasi syntax YAML/JSON seluruh repo (Fase 6)
+│   └── install.sh              # instalasi otomatis: prerequisites, kredensial, validasi, start stack
 └── docs/
     ├── deployment.md
     └── handover.md             # runbook operasional & handover (Fase 6)
@@ -41,7 +42,9 @@ Spesifikasi lengkap: [`PRD_Monitoring_VM_Nusabackup.md`](PRD_Monitoring_VM_Nusab
 
 ## Deploy
 
-Lihat [`docs/deployment.md`](docs/deployment.md) untuk langkah setup, validasi, dan verifikasi lengkap.
+Cara tercepat: jalankan `bash scripts/install.sh` di monitoring VM — script ini meng-install prerequisites yang belum ada (Docker via get.docker.com, python3/PyYAML), copy template config, prompt kredensial (Grafana, Proxmox API token, Telegram bot) secara interaktif, validasi config (`promtool`/`amtool` dijalankan lewat image Docker yang sama dengan stack, tanpa perlu install terpisah), lalu `docker compose up -d`. Flag: `--yes` (skip semua konfirmasi), `--skip-start` (stop sebelum start stack), `--force` (isi ulang kredensial yang sudah ada).
+
+Untuk langkah manual step-by-step (atau kalau installer gagal di suatu langkah), lihat [`docs/deployment.md`](docs/deployment.md).
 
 ## Handover & Validasi
 
@@ -114,6 +117,7 @@ Catatan penting:
 - Testing nyata (`docker compose up`, trigger alert sungguhan, cek pesan Telegram) dan tuning threshold berbasis data produksi **tidak bisa dikerjakan di sandbox pengembangan** (tidak ada `docker`/`promtool`/`amtool`/Proxmox/Telegram nyata) — ini eksplisit diserahkan ke operator setelah deploy ke monitoring VM sungguhan, bukan diklaim selesai di sini.
 - 2 dari 5 open question PRD §12 masih belum terjawab: **siapa on-call/penerima alert critical**, dan **apakah butuh integrasi Loki**. Lihat `docs/handover.md` §8.
 - `scripts/validate.sh` benar-benar dijalankan di sandbox ini terhadap semua file config repo dan semuanya lolos syntax check — tapi ini cuma syntax, bukan pengganti `promtool`/`amtool`/`docker compose config`.
+- **Follow-up pasca-Fase 6**: `scripts/install.sh` ditambahkan untuk mengotomatisasi seluruh langkah Setup di `docs/deployment.md` (install prerequisites, copy template, prompt kredensial, validasi via `docker run` promtool/amtool, start stack). Sudah diuji alur lengkapnya di sandbox dengan `docker` yang di-stub — belum pernah dijalankan sungguhan di monitoring VM nyata (install Docker asli, `docker compose up` asli).
 
 ## Keputusan yang Sudah Dikonfirmasi
 

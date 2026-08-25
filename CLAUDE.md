@@ -31,6 +31,9 @@ Sistem monitoring terpusat untuk VM di lingkungan **Proxmox** milik Nusabackup. 
 │   └── provisioning/
 ├── exporters/
 │   └── backup-job-exporter/  # custom exporter untuk status job backup
+├── scripts/
+│   ├── validate.sh           # validasi syntax YAML/JSON seluruh repo
+│   └── install.sh            # instalasi otomatis (prerequisites, kredensial, validasi, start stack)
 ├── ansible/ atau terraform/   # (jika ada) provisioning monitoring VM & agent
 └── docs/
 ```
@@ -48,6 +51,12 @@ Sistem monitoring terpusat untuk VM di lingkungan **Proxmox** milik Nusabackup. 
 ## Command yang Sering Dipakai
 
 ```bash
+# Instalasi otomatis di monitoring VM: install prerequisites (Docker,
+# python3/PyYAML) yang belum ada, copy template config, prompt kredensial,
+# validasi, lalu start stack. Lihat scripts/install.sh untuk flag --yes/
+# --skip-start/--force.
+bash scripts/install.sh
+
 # Validasi syntax config Prometheus
 promtool check config prometheus/prometheus.yml
 
