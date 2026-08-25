@@ -45,11 +45,14 @@ confirm() {
 
 replace_in_file() {
   # Literal (non-regex) string replacement, safe for secrets containing
-  # sed/regex metacharacters.
-  local file="$1" old="$2" new="$3"
-  python3 - "$file" "$old" "$new" <<'PYEOF'
-import sys
-path, old, new = sys.argv[1], sys.argv[2], sys.argv[3]
+  # sed/regex metacharacters. old/new travel via env vars (REPL_OLD/REPL_NEW),
+  # not argv — argv is visible to any local user via `ps`/`/proc/<pid>/cmdline`,
+  # env vars of another user's process are not.
+  local file="$1"
+  REPL_OLD="$2" REPL_NEW="$3" python3 - "$file" <<'PYEOF'
+import os, sys
+path = sys.argv[1]
+old, new = os.environ["REPL_OLD"], os.environ["REPL_NEW"]
 with open(path, "r", encoding="utf-8") as f:
     content = f.read()
 if old not in content:
@@ -175,7 +178,18 @@ if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; 
 else
   confirm "Docker / docker compose plugin belum lengkap. Install via get.docker.com sekarang?" \
     || { echo "Dibatalkan — Docker wajib untuk menjalankan stack."; exit 1; }
-  curl -fsSL https://get.docker.com | $SUDO sh
+  # Download first instead of piping straight into a root shell: an
+  # interrupted/MITM'd stream can't execute partial output, and the script
+  # is inspectable on disk before anything runs.
+  DOCKER_INSTALL_SCRIPT="$(mktemp)"
+  trap 'rm -f "$DOCKER_INSTALL_SCRIPT"' EXIT
+  curl -fsSL https://get.docker.com -o "$DOCKER_INSTALL_SCRIPT"
+  echo "Docker install script diunduh ke $DOCKER_INSTALL_SCRIPT — periksa dulu kalau perlu."
+  confirm "Lanjutkan eksekusi script tersebut (dengan sudo)?" \
+    || { echo "Dibatalkan — Docker wajib untuk menjalankan stack."; exit 1; }
+  $SUDO sh "$DOCKER_INSTALL_SCRIPT"
+  rm -f "$DOCKER_INSTALL_SCRIPT"
+  trap - EXIT
   $SUDO systemctl enable --now docker 2>/dev/null || true
   if [ -n "$SUDO" ]; then
     $SUDO usermod -aG docker "$(id -un)" || true
@@ -208,12 +222,16 @@ copy_template() {
     echo "$dst sudah ada, tidak ditimpa"
   else
     cp "$src" "$dst"
-    echo "created $dst"
+    chmod 600 "$dst"
+    echo "created $dst (mode 600)"
   fi
 }
 copy_template .env.example .env
 copy_template prometheus/pve.yml.example prometheus/pve.yml
 copy_template alertmanager/alertmanager.yml.example alertmanager/alertmanager.yml
+# Also lock down files that already existed (e.g. hand-copied per docs)
+# before credentials get written into them below.
+chmod 600 .env prometheus/pve.yml alertmanager/alertmanager.yml
 echo
 
 # ---------------------------------------------------------------------------
