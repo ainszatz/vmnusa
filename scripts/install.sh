@@ -257,10 +257,16 @@ copy_template alertmanager/alertmanager.yml.example alertmanager/alertmanager.ym
 # never mounted into a container, so it can stay owner-only.
 chmod 600 .env
 # pve.yml and alertmanager.yml ARE bind-mounted read-only into containers
-# that run as non-root (prom/prometheus and prom/alertmanager use UID 65534
-# "nobody"). chmod 600 would make them unreadable to that UID and the
-# containers would fail to start, so these stay group/other-readable.
-chmod 644 prometheus/pve.yml alertmanager/alertmanager.yml
+# that run as non-root, so root-only (600) would make them unreadable and
+# the containers would fail to start. World-readable (644) would work too
+# but leaks Proxmox/Telegram credentials to any local user — instead,
+# chgrp each file to its actual container's GID (verified from each
+# image's upstream Dockerfile: prometheus-pve-exporter runs as 101:101,
+# prom/alertmanager runs as nobody = 65534:65534) and use 640, so only
+# root and that specific container can read it.
+$SUDO chown root:101 prometheus/pve.yml 2>/dev/null || true
+$SUDO chown root:65534 alertmanager/alertmanager.yml 2>/dev/null || true
+chmod 640 prometheus/pve.yml alertmanager/alertmanager.yml
 echo
 
 # ---------------------------------------------------------------------------
