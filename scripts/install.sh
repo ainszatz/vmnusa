@@ -68,6 +68,27 @@ file_contains() {
   grep -qF -- "$needle" "$file" 2>/dev/null
 }
 
+replace_pve_host() {
+  # Idempotent replace of the pve job's target host in prometheus.yml: matches
+  # whatever is currently inside the quotes (placeholder or a real host from a
+  # prior run), unlike replace_in_file's literal-old-string match — needed
+  # because this file has no .example template to re-copy from under --force.
+  local file="$1" new_host="$2"
+  REPL_NEW="$new_host" python3 - "$file" <<'PYEOF'
+import os, re, sys
+path = sys.argv[1]
+new = os.environ["REPL_NEW"]
+with open(path, "r", encoding="utf-8") as f:
+    content = f.read()
+pattern = re.compile(r'(job_name: pve\n(?:.*\n)*?\s*- targets: \[")([^"]*)("\])')
+content, n = pattern.subn(lambda m: m.group(1) + new + m.group(3), content, count=1)
+if n == 0:
+    sys.exit(f"ERROR: pve job targets line not found in {path}")
+with open(path, "w", encoding="utf-8") as f:
+    f.write(content)
+PYEOF
+}
+
 prompt_required() {
   # prompt_required VAR_NAME "Prompt text" ["default"]
   local __var="$1" __text="$2" __default="${3:-}"
@@ -217,21 +238,29 @@ echo
 # ---------------------------------------------------------------------------
 echo "== Copying config templates =="
 copy_template() {
-  local src="$1" dst="$2"
-  if [ -f "$dst" ]; then
+  # copy_template SRC DST [force]
+  local src="$1" dst="$2" force="${3:-0}"
+  if [ -f "$dst" ] && [ "$force" -ne 1 ]; then
     echo "$dst sudah ada, tidak ditimpa"
   else
     cp "$src" "$dst"
-    chmod 600 "$dst"
-    echo "created $dst (mode 600)"
+    echo "created $dst"
   fi
 }
-copy_template .env.example .env
-copy_template prometheus/pve.yml.example prometheus/pve.yml
-copy_template alertmanager/alertmanager.yml.example alertmanager/alertmanager.yml
-# Also lock down files that already existed (e.g. hand-copied per docs)
-# before credentials get written into them below.
-chmod 600 .env prometheus/pve.yml alertmanager/alertmanager.yml
+# With --force, re-copy from the .example templates so placeholder strings
+# exist again for replace_in_file to match (otherwise a second run would
+# try to replace text that a prior run already overwrote, and abort).
+copy_template .env.example .env "$FORCE"
+copy_template prometheus/pve.yml.example prometheus/pve.yml "$FORCE"
+copy_template alertmanager/alertmanager.yml.example alertmanager/alertmanager.yml "$FORCE"
+# .env is only read by docker compose on the host (injected as env vars),
+# never mounted into a container, so it can stay owner-only.
+chmod 600 .env
+# pve.yml and alertmanager.yml ARE bind-mounted read-only into containers
+# that run as non-root (prom/prometheus and prom/alertmanager use UID 65534
+# "nobody"). chmod 600 would make them unreadable to that UID and the
+# containers would fail to start, so these stay group/other-readable.
+chmod 644 prometheus/pve.yml alertmanager/alertmanager.yml
 echo
 
 # ---------------------------------------------------------------------------
@@ -244,8 +273,14 @@ if [ "$FORCE" -eq 1 ] || grep -q "^GRAFANA_ADMIN_PASSWORD=$" .env 2>/dev/null; t
   echo "-- Grafana admin"
   prompt_required GRAFANA_USER "Grafana admin username" "admin"
   prompt_secret GRAFANA_PASS "Grafana admin password"
-  replace_in_file .env "GRAFANA_ADMIN_USER=admin" "GRAFANA_ADMIN_USER=${GRAFANA_USER}" || true
-  replace_in_file .env "GRAFANA_ADMIN_PASSWORD=" "GRAFANA_ADMIN_PASSWORD=${GRAFANA_PASS}"
+  # Quoted: an unquoted value containing '#' or whitespace can be
+  # mis-parsed by Docker Compose's .env reader (e.g. '#' starts a comment).
+  # Escape backslash/double-quote first so an embedded '"' in the password
+  # can't break out of the quoted .env value.
+  GRAFANA_PASS_ESCAPED="${GRAFANA_PASS//\\/\\\\}"
+  GRAFANA_PASS_ESCAPED="${GRAFANA_PASS_ESCAPED//\"/\\\"}"
+  replace_in_file .env "GRAFANA_ADMIN_USER=admin" "GRAFANA_ADMIN_USER=\"${GRAFANA_USER}\"" || true
+  replace_in_file .env "GRAFANA_ADMIN_PASSWORD=" "GRAFANA_ADMIN_PASSWORD=\"${GRAFANA_PASS_ESCAPED}\""
 else
   echo "-- Grafana admin password sudah diisi, skip. (pakai --force untuk isi ulang)"
 fi
@@ -267,7 +302,7 @@ fi
 if [ "$FORCE" -eq 1 ] || file_contains prometheus/prometheus.yml "pve1.example.local"; then
   echo "-- Proxmox host (job 'pve' di prometheus/prometheus.yml)"
   prompt_required PVE_HOST "Hostname/IP node Proxmox asli"
-  replace_in_file prometheus/prometheus.yml "pve1.example.local" "${PVE_HOST}"
+  replace_pve_host prometheus/prometheus.yml "${PVE_HOST}"
 else
   echo "-- prometheus/prometheus.yml sudah diisi, skip. (pakai --force untuk isi ulang)"
 fi
@@ -311,10 +346,14 @@ echo "OK   docker compose config"
   check config /etc/prometheus/prometheus.yml
 echo "OK   promtool check config"
 
-"${DOCKER[@]}" run --rm -v "$(pwd)/prometheus:/etc/prometheus:ro" \
-  --entrypoint sh prom/prometheus:latest \
-  -c "promtool check rules /etc/prometheus/rules/*.yml"
-echo "OK   promtool check rules"
+if compgen -G "prometheus/rules/*.yml" >/dev/null; then
+  "${DOCKER[@]}" run --rm -v "$(pwd)/prometheus:/etc/prometheus:ro" \
+    --entrypoint sh prom/prometheus:latest \
+    -c "promtool check rules /etc/prometheus/rules/*.yml"
+  echo "OK   promtool check rules"
+else
+  echo "SKIP promtool check rules (prometheus/rules/*.yml kosong)"
+fi
 
 "${DOCKER[@]}" run --rm -v "$(pwd)/alertmanager:/etc/alertmanager:ro" \
   --entrypoint amtool prom/alertmanager:latest \
